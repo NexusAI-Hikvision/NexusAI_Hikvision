@@ -10,11 +10,11 @@ NexusAI is a lightweight, zero-GPU event management and alert relay engine built
 
 ## 🌟 Key Features
 
-- **Zero Local Hardware Bottleneck:** Eliminates the need for high-end local GPUs or heavy PyTorch/YOLO inference loops by consuming edge camera analytics directly.
-- **Real-time ISAPI Event Streaming:** Connects to persistent HTTP chunked multipart streams (`/ISAPI/Event/notification/alertStream`) to receive immediate VCA threat triggers.
-- **Automated Discord Dispatch:** Instantly parses incoming XML/JSON event payloads and dispatches formatted, high-priority threat cards to Discord `#threat-alerts`.
-- **Digest Authentication Handling:** Securely handles HTTP Digest handshake constraints required by Hikvision camera firmware.
-- **Extensible Alert Payload Architecture:** Built to easily route events to central management dashboards and custom client billing modules.
+* **Zero Local Hardware Bottleneck:** Eliminates the need for high-end local GPUs or heavy PyTorch/YOLO inference loops by consuming edge camera analytics directly.
+* **Real-time ISAPI Event Streaming:** Connects to persistent HTTP chunked multipart streams (`/ISAPI/Event/notification/alertStream`) to receive immediate VCA threat triggers.
+* **Automated Discord Dispatch:** Instantly parses incoming XML/JSON event payloads and dispatches formatted, high-priority threat cards to Discord `#threat-alerts`.
+* **Digest Authentication Handling:** Securely handles HTTP Digest handshake constraints required by Hikvision camera firmware.
+* **Extensible Alert Payload Architecture:** Built to easily route events to central management dashboards and custom client billing modules.
 
 ---
 
@@ -25,4 +25,3 @@ NexusAI is a lightweight, zero-GPU event management and alert relay engine built
 │  Hikvision VCA Camera   │ ────────────────────────> │  NexusAI Relay Engine  │ ──────────────> │    Discord Webhook     │
 │ (Embedded Detection AI) │   Chunked JSON / XML      │ (nexus_isapi_relay.py) │                 │  & Admin Dashboard     │
 └─────────────────────────┘                           └────────────────────────┘                 └────────────────────────┘
-```

@@ -1,0 +1,2 @@
+# Local environment variables containing sensitive keys/passwords
+.env
