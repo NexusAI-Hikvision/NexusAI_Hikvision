@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Started — NexusAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- <link rel="stylesheet" href="styles.css"> -->
+</head>
+<body>
+
+    <nav class="nav">
+      <div class="wrap">
+        <div class="logo">Nexus<span>AI</span></div>
+        <a href="index.html" class="back-link">← Back</a>
+      </div>
+    </nav>
+
+    <div class="form-shell">
+      <div class="form-card">
+        <h1>Get Started</h1>
+        <p class="form-sub">Tell us about your site and we'll get your cameras connected.</p>
+
+        <form id="onboarding-form">
+            <div class="field">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" placeholder="Nelson Johnson" required>
+            </div>
+
+            <div class="field">
+                <label for="location">Location <span class="req">*</span></label>
+                <input type="text" id="location" name="location" placeholder="123 Street Name, Suburb, City, Country" required>
+            </div>
+
+            <div class="field">
+                <label for="contact_person">Contact Person</label>
+                <input type="text" id="contact_person" name="contact_person" placeholder="Mathew Fredrick" required>
+            </div>
+
+            <div class="field">
+                <label for="contact_phone">Phone Number</label>
+                <input type="tel" id="contact_phone" name="contact_phone" placeholder="0123456789" required>
+            </div>
+
+            <div class="field">
+                <label for="camera_count">Number of Cameras</label>
+                <input type="number" id="camera_count" name="camera_count" list="camera_suggestions" min="1" max="10" placeholder="4" required>
+                <datalist id="camera_suggestions">
+                    <option value="1"></option>
+                    <option value="2"></option>
+                    <option value="4"></option>
+                    <option value="8"></option>
+                </datalist>
+            </div>
+
+            <button type="submit" id="submit-btn" class="btn btn-primary">Generate My QR Code</button>
+        </form>
+
+        <p id="form-status" class="form-status"></p>
+
+        <div id="qr-result" class="qr-result">
+          <img id="qr-output" alt="QR code linking to your camera onboarding page">
+          <p>Scan this code to finish setting up your cameras.</p>
+          <p class="token" id="qr-url"></p>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusAI Dashboard Form Skeleton</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Nexus AI Form</h1>
+    <form action="">
+        <label for="name">Name</label> <br>
+        <input type="text" id="name" placeholder="Nelson Johnson" required> <br> <br>
+
+        <label for="location">Location <span>*</span></label> <br>
+        <input type="text" id="location" placeholder="123 Street Name, Suburb, City, Country" required> <br> <br>
+
+        <label for="contact_person">Contact Person</label> <br>
+        <input type="text" id="contact_person" placeholder="Mathew Fredrick" required> <br> <br>
+
+        <label for="contact_phone">Phone Number</label> <br>
+        <input type="tel" id="contact_phone" placeholder="0123456789" required> <br> <br>
+
+       <label for="camera_count">Number of Cameras</label> <br>
+       <input type="number" id="camera_count" name="camera_count" list="camera_suggestions" min="1" max="10">
+       <datalist id="camera_suggestions">
+        <option value="1"></option>
+        <option value="2"></option>
+        <option value="4"></option>
+        <option value="8"></option>
+       </datalist> <br> <br>
+    </form>
+
+    <button type="button" id="submit-btn">Submit</button>
+
+    <script src="script.js"></script>
+</body>
+</html> -->
