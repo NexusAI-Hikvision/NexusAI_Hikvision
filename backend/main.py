@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import base64
 import logging
 import os
@@ -11,22 +10,12 @@ from urllib.parse import quote
 
 from dotenv import dotenv_values
 from fastapi import FastAPI, HTTPException
-=======
-import sqlite3
-import secrets
-import base64
-import os
-from io import BytesIO
-
-from fastapi import FastAPI
->>>>>>> 24a93dd31e7b1e372f00832431f03ca288ac3ce2
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from generate_qr_code import build_qr
 from isapi_auth import verify_camera_auth
 
-<<<<<<< HEAD
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("nexusai")
 
@@ -39,18 +28,10 @@ app = FastAPI(title="NexusAI API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("ALLOWED_ORIGINS", "*").split(","),
-=======
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
->>>>>>> 24a93dd31e7b1e372f00832431f03ca288ac3ce2
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-<<<<<<< HEAD
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 ENV_PATH = os.path.join(PROJECT_ROOT, ".env")
@@ -79,13 +60,6 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-=======
-BASE_DIR = os.path.dirname(__file__)
-DB_PATH = os.path.join(BASE_DIR, "NexusAI_Form_Database.db")
-QR_DIR = os.path.join(BASE_DIR, "qrcodes")
-os.makedirs(QR_DIR, exist_ok=True)
-
->>>>>>> 24a93dd31e7b1e372f00832431f03ca288ac3ce2
 
 # ---------------------------------------------------------------------------
 # Client intake / QR code generation
@@ -96,18 +70,13 @@ class ClientForm(BaseModel):
     location: str
     contact_person: str
     contact_phone: str
-<<<<<<< HEAD
     camera_count: int = Field(ge=1, le=128)
-=======
-    camera_count: int = Field(ge=1, le=10)
->>>>>>> 24a93dd31e7b1e372f00832431f03ca288ac3ce2
 
 
 @app.post("/generate-qr")
 def generate_qr(data: ClientForm):
     token = secrets.token_hex(16)
 
-<<<<<<< HEAD
     try:
         with closing(get_db()) as conn:
             cur = conn.cursor()
@@ -173,54 +142,6 @@ def get_client(token: str):
 
 class NVRConnectRequest(BaseModel):
     token: str
-=======
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-
-    cur.execute("""
-        INSERT INTO client (name, location, contact_name, contact_phone, token)
-        VALUES (?, ?, ?, ?, ?)
-    """, (data.name, data.location, data.contact_person, data.contact_phone, token))
-    client_id = cur.lastrowid
-
-    url = (
-        f"https://nexusai.co.za?"
-        f"client={data.name}&location={data.location}"
-        f"&contact={data.contact_person}&phone={data.contact_phone}"
-        f"&cams={data.camera_count}&token={token}"
-    )
-
-    # NOTE: was previously "qrcodes/{token}.png" — relative to whatever
-    # directory uvicorn was launched from, not to this file. Fixed to
-    # always resolve to backend/qrcodes regardless of cwd.
-    image_path = os.path.join(QR_DIR, f"{token}.png")
-    img = build_qr(url, image_path)
-
-    cur.execute("""
-        INSERT INTO qrcode (client_id, token, url, image_path)
-        VALUES (?, ?, ?, ?)
-    """, (client_id, token, url, image_path))
-
-    conn.commit()
-    conn.close()
-
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    img_base64 = base64.b64encode(buffered.getvalue()).decode()
-
-    return {
-        "url": url,
-        "token": token,
-        "qr_image_base64": img_base64
-    }
-
-
-# ---------------------------------------------------------------------------
-# Camera connection / ISAPI authentication
-# ---------------------------------------------------------------------------
-
-class ConnectCameraRequest(BaseModel):
->>>>>>> 24a93dd31e7b1e372f00832431f03ca288ac3ce2
     ip: str
     port: int = Field(default=80, ge=1, le=65535)
     username: str
@@ -232,7 +153,6 @@ class ConnectCameraResponse(BaseModel):
     message: str
 
 
-<<<<<<< HEAD
 @app.post("/connect-nvr", response_model=ConnectCameraResponse)
 def connect_nvr(payload: NVRConnectRequest):
     with closing(get_db()) as conn:
@@ -257,29 +177,38 @@ def connect_nvr(payload: NVRConnectRequest):
                 "message": "Please check your NVR IP, username, or password.",
             }
 
-        # 2. Record/update the camera entry for this client.
-        #    (No ON CONFLICT clause here: the `cameras` table doesn't have a
-        #    unique constraint on client_id in the shipped schema, so we
-        #    do a manual upsert instead of relying on one.)
-        existing = conn.execute(
-            "SELECT id FROM cameras WHERE client_id = ?", (client_row["id"],)
+        # 2. Upsert the NVR record, then ensure one `cameras` row exists per
+        #    channel (not one row for the whole NVR) — this is what lets a
+        #    single QR/NVR connection populate the dashboard with all of a
+        #    site's cameras instead of just one.
+        existing_nvr = conn.execute(
+            "SELECT id FROM nvrs WHERE client_id = ?", (client_row["id"],)
         ).fetchone()
-        if existing:
-            conn.execute(
-                """
-                UPDATE cameras SET ip_address = ?, username = ?, password = ?, status = 'active'
+        if existing_nvr:
+            conn.execute("""
+                UPDATE nvrs SET ip_address = ?, username = ?, password = ?, channel_count = ?
                 WHERE id = ?
-                """,
-                (payload.ip, payload.username, payload.password, existing["id"]),
-            )
+            """, (payload.ip, payload.username, payload.password, client_row["camera_count"], existing_nvr["id"]))
+            nvr_id = existing_nvr["id"]
         else:
-            conn.execute(
-                """
-                INSERT INTO cameras (client_id, ip_address, username, password, status)
-                VALUES (?, ?, ?, ?, 'active')
-                """,
-                (client_row["id"], payload.ip, payload.username, payload.password),
-            )
+            cur = conn.execute("""
+                INSERT INTO nvrs (client_id, ip_address, username, password, channel_count)
+                VALUES (?, ?, ?, ?, ?)
+            """, (client_row["id"], payload.ip, payload.username, payload.password, client_row["camera_count"]))
+            nvr_id = cur.lastrowid
+
+        existing_channels = conn.execute(
+            "SELECT channel_id FROM cameras WHERE nvr_id = ?", (nvr_id,)
+        ).fetchall()
+        existing_channel_ids = {row["channel_id"] for row in existing_channels}
+
+        for channel_num in range(1, client_row["camera_count"] + 1):
+            if channel_num not in existing_channel_ids:
+                conn.execute("""
+                    INSERT INTO cameras (client_id, nvr_id, channel_id, status)
+                    VALUES (?, ?, ?, 'pending')
+                """, (client_row["id"], nvr_id, channel_num))
+
         conn.commit()
 
     # 3. Launch a background ISAPI relay dedicated to this client. Config is
@@ -325,26 +254,6 @@ def _stop_relay(token: str):
             proc.kill()
 
 
-=======
-@app.post("/connect-camera", response_model=ConnectCameraResponse)
-def connect_camera(payload: ConnectCameraRequest):
-    result = verify_camera_auth(
-        ip=payload.ip,
-        port=payload.port,
-        username=payload.username,
-        password=payload.password,
-    )
-
-    if result["success"]:
-        return {"status": "success", "message": "Camera connected successfully."}
-
-    return {
-        "status": "error",
-        "message": "Please check your camera IP, username or password.",
-    }
-
-
->>>>>>> 24a93dd31e7b1e372f00832431f03ca288ac3ce2
 @app.get("/health")
 def health():
     return {"status": "ok"}
