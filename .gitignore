@@ -1,6 +1,2 @@
-<<<<<<< HEAD
 # Local environment variables containing sensitive keys/passwords
-=======
-# Local environment variables containing sensitive keys/passwords
->>>>>>> 24a93dd31e7b1e372f00832431f03ca288ac3ce2
 .env
