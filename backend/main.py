@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 from generate_qr_code import build_qr
 from isapi_auth import verify_camera_auth
 
+BASE_URL = os.getenv("BASE_URL", "https://getnexusai.co.za")
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("nexusai")
 
@@ -94,7 +96,7 @@ def generate_qr(data: ClientForm):
             # up everything else from the DB. This also keeps the client's
             # name/phone number out of a URL that might land in browser
             # history, server access logs, or a QR-scanning app's history.
-            url = f"https://nexusai.co.za/connect_camera.html?token={quote(token)}"
+            url = f"{BASE_URL}/connect_camera.html?token={quote(token)}"
 
             image_path = os.path.join(QR_DIR, f"{token}.png")
             build_qr(url, image_path)
