@@ -9,10 +9,10 @@ from contextlib import closing
 from urllib.parse import quote
 
 from dotenv import dotenv_values
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
 from generate_qr_code import build_qr
 from isapi_auth import verify_camera_auth
 
@@ -257,3 +257,9 @@ def _stop_relay(token: str):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+app.mount(
+    "/",
+    StaticFiles(directory=os.path.join(os.path.dirname(__file__), "..", "frontend"), html=True),
+    name="frontend",
+)
