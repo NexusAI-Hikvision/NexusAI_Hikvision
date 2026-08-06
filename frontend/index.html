@@ -43,13 +43,31 @@
             content: "● ";
             color: #4ade80;
         }
+        .cta {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.9rem 2rem;
+            background: #ffb000;
+            color: #0a0a0a;
+            font-family: inherit;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: opacity 0.15s ease;
+        }
+        .cta:hover { opacity: 0.85; }
+        .cta-row { margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>NEXUSAI</h1>
         <p>AI-powered deployment and monitoring for IP security cameras.</p>
-        <p>Onboarding is by invitation — scan your QR code to connect your site.</p>
+        <p>New site? Get onboarded and connected in minutes.</p>
+        <div class="cta-row">
+            <a href="/form.html" class="cta">Onboard a New Site</a>
+        </div>
         <div class="status">SYSTEM ONLINE</div>
     </div>
 </body>
