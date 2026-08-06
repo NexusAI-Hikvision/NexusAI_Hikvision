@@ -3,7 +3,7 @@ const submitBtn = document.getElementById("submit-btn");
 const statusEl = document.getElementById("connect-status");
 const clientNameEl = document.getElementById("client-name");
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "";
 
 const token = new URLSearchParams(window.location.search).get("token");
 
