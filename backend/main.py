@@ -2,12 +2,13 @@ import base64
 import logging
 import os
 import secrets
-import sqlite3
 import subprocess
 import sys
 from contextlib import closing
 from urllib.parse import quote
 
+import psycopg2
+import psycopg2.extras
 from dotenv import dotenv_values
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException
@@ -17,6 +18,7 @@ from generate_qr_code import build_qr
 from isapi_auth import verify_camera_auth
 
 BASE_URL = os.getenv("BASE_URL", "https://getnexusai.co.za")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("nexusai")
@@ -37,7 +39,6 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 ENV_PATH = os.path.join(PROJECT_ROOT, ".env")
-DB_PATH = os.path.join(BASE_DIR, "NexusAI_Form_Database.db")
 QR_DIR = os.path.join(BASE_DIR, "qrcodes")
 RELAY_SCRIPT = os.path.join(BASE_DIR, "nexus_isapi_relay.py")
 os.makedirs(QR_DIR, exist_ok=True)
@@ -57,9 +58,9 @@ _RUNNING_RELAYS: dict[str, subprocess.Popen] = {}
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.row_factory = sqlite3.Row
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not set.")
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 
@@ -85,11 +86,12 @@ def generate_qr(data: ClientForm):
             cur.execute(
                 """
                 INSERT INTO client (name, location, contact_name, contact_phone, token, camera_count)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
                 """,
                 (data.name, data.location, data.contact_person, data.contact_phone, token, data.camera_count),
             )
-            client_id = cur.lastrowid
+            client_id = cur.fetchone()["id"]
 
             # Only the token needs to travel in the URL - it's the one thing
             # the connect-camera page actually needs, and the server looks
@@ -104,12 +106,12 @@ def generate_qr(data: ClientForm):
             cur.execute(
                 """
                 INSERT INTO qrcode (client_id, token, url, image_path)
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
                 """,
                 (client_id, token, url, image_path),
             )
             conn.commit()
-    except sqlite3.Error:
+    except psycopg2.Error:
         log.exception("Database error while generating QR code")
         raise HTTPException(status_code=500, detail="Could not save client record. Please try again.")
 
@@ -128,9 +130,11 @@ def generate_qr(data: ClientForm):
 @app.get("/client/{token}")
 def get_client(token: str):
     with closing(get_db()) as conn:
-        row = conn.execute(
-            "SELECT name, location, camera_count FROM client WHERE token = ?", (token,)
-        ).fetchone()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT name, location, camera_count FROM client WHERE token = %s", (token,)
+        )
+        row = cur.fetchone()
 
     if row is None:
         raise HTTPException(status_code=404, detail="Unknown or expired token.")
@@ -158,9 +162,11 @@ class ConnectCameraResponse(BaseModel):
 @app.post("/connect-nvr", response_model=ConnectCameraResponse)
 def connect_nvr(payload: NVRConnectRequest):
     with closing(get_db()) as conn:
-        client_row = conn.execute(
-            "SELECT id, name, camera_count FROM client WHERE token = ?", (payload.token,)
-        ).fetchone()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, name, camera_count FROM client WHERE token = %s", (payload.token,)
+        )
+        client_row = cur.fetchone()
 
         if client_row is None:
             raise HTTPException(status_code=404, detail="Unknown or expired token. Please rescan your QR code.")
@@ -183,32 +189,35 @@ def connect_nvr(payload: NVRConnectRequest):
         #    channel (not one row for the whole NVR) — this is what lets a
         #    single QR/NVR connection populate the dashboard with all of a
         #    site's cameras instead of just one.
-        existing_nvr = conn.execute(
-            "SELECT id FROM nvrs WHERE client_id = ?", (client_row["id"],)
-        ).fetchone()
+        cur.execute(
+            "SELECT id FROM nvrs WHERE client_id = %s", (client_row["id"],)
+        )
+        existing_nvr = cur.fetchone()
         if existing_nvr:
-            conn.execute("""
-                UPDATE nvrs SET ip_address = ?, username = ?, password = ?, channel_count = ?
-                WHERE id = ?
+            cur.execute("""
+                UPDATE nvrs SET ip_address = %s, username = %s, password = %s, channel_count = %s
+                WHERE id = %s
             """, (payload.ip, payload.username, payload.password, client_row["camera_count"], existing_nvr["id"]))
             nvr_id = existing_nvr["id"]
         else:
-            cur = conn.execute("""
+            cur.execute("""
                 INSERT INTO nvrs (client_id, ip_address, username, password, channel_count)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
             """, (client_row["id"], payload.ip, payload.username, payload.password, client_row["camera_count"]))
-            nvr_id = cur.lastrowid
+            nvr_id = cur.fetchone()["id"]
 
-        existing_channels = conn.execute(
-            "SELECT channel_id FROM cameras WHERE nvr_id = ?", (nvr_id,)
-        ).fetchall()
+        cur.execute(
+            "SELECT channel_id FROM cameras WHERE nvr_id = %s", (nvr_id,)
+        )
+        existing_channels = cur.fetchall()
         existing_channel_ids = {row["channel_id"] for row in existing_channels}
 
         for channel_num in range(1, client_row["camera_count"] + 1):
             if channel_num not in existing_channel_ids:
-                conn.execute("""
+                cur.execute("""
                     INSERT INTO cameras (client_id, nvr_id, channel_id, status)
-                    VALUES (?, ?, ?, 'pending')
+                    VALUES (%s, %s, %s, 'pending')
                 """, (client_row["id"], nvr_id, channel_num))
 
         conn.commit()
