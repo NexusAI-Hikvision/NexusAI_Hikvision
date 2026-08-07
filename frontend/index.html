@@ -1,74 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexusAI</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0a0a;
-            color: #ffb000;
-            font-family: 'Courier New', monospace;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 2rem;
-        }
-        .container { max-width: 600px; }
-        h1 {
-            font-size: clamp(2rem, 6vw, 3.5rem);
-            letter-spacing: 0.1em;
-            text-shadow: 0 0 10px rgba(255, 176, 0, 0.5);
-            margin-bottom: 1rem;
-        }
-        p {
-            color: #b8860b;
-            font-size: 1.1rem;
-            line-height: 1.6;
-            margin-bottom: 0.5rem;
-        }
-        .status {
-            display: inline-block;
-            margin-top: 2rem;
-            padding: 0.5rem 1rem;
-            border: 1px solid #ffb000;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            letter-spacing: 0.05em;
-        }
-        .status::before {
-            content: "● ";
-            color: #4ade80;
-        }
-        .cta {
-            display: inline-block;
-            margin-top: 2rem;
-            padding: 0.9rem 2rem;
-            background: #ffb000;
-            color: #0a0a0a;
-            font-family: inherit;
-            font-weight: bold;
-            letter-spacing: 0.05em;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: opacity 0.15s ease;
-        }
-        .cta:hover { opacity: 0.85; }
-        .cta-row { margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusAI — AI Threat Detection for Existing Cameras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>NEXUSAI</h1>
-        <p>AI-powered deployment and monitoring for IP security cameras.</p>
-        <p>New site? Get onboarded and connected in minutes.</p>
-        <div class="cta-row">
-            <a href="/form.html" class="cta">Onboard a New Site</a>
-        </div>
-        <div class="status">SYSTEM ONLINE</div>
+
+  <nav class="nav">
+    <div class="wrap">
+      <div class="logo">NEXUS<span>AI</span></div>
+      <div class="nav-status">
+        <span class="osd"><span class="rec-dot"></span>System Online</span>
+      </div>
     </div>
+  </nav>
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-frame">
+        <span class="corner tl"></span>
+        <span class="corner tr"></span>
+        <span class="corner bl"></span>
+        <span class="corner br"></span>
+
+        <div class="hero-eyebrow">
+          <span class="osd"><span class="rec-dot"></span>Live Monitoring</span>
+        </div>
+
+        <h1>AI That Detects Threats, Theft &amp; Weapons on Existing Cameras</h1>
+        <p class="hero-sub">No new hardware. No monthly contract. Just instant alerts to your phone.</p>
+
+        <a href="/form.html" class="btn btn-primary">Claim Your Installer Account</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="pricing-note">
+    <div class="wrap">
+      <span class="osd">Activation from <strong>R200</strong> per site</span>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <span class="osd">&copy; NexusAI</span>
+      <span class="osd">getnexusai.co.za</span>
+    </div>
+  </footer>
+
 </body>
 </html>

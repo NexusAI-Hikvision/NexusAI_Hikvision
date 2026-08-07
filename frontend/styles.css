@@ -1,26 +1,25 @@
 /* ==========================================================================
    NexusAI — design tokens
-   Concept: an old analog monitoring station — amber phosphor displays,
-   on-screen camera chrome (REC dot, timestamps, corner reticles),
-   monospace overlay text. Not the generic acid-green "hacker" look —
-   amber reads as instrumentation, not cliché terminal.
+   Concept: a monitoring-station UI — on-screen camera chrome (REC dot,
+   corner reticles, monospace OSD overlay text) recolored to the brand's
+   orange rather than a literal amber-phosphor palette.
    ========================================================================== */
 
 :root {
   /* color */
-  --bg: #0d0c0a;
-  --bg-raised: #17150f;
-  --panel: #1c1911;
-  --border: #322c1e;
-  --border-soft: #241f15;
+  --bg: #0a0a0a;
+  --bg-raised: #141414;
+  --panel: #1a1a1a;
+  --border: #2e2e2e;
+  --border-soft: #1f1f1f;
 
-  --text: #f1ede0;
-  --text-muted: #948c72;
-  --text-faint: #5c5642;
+  --text: #ffffff;
+  --text-muted: #9a9a9a;
+  --text-faint: #5c5c5c;
 
-  --amber: #ffb020;
-  --amber-dim: #7a5a1e;
-  --amber-wash: rgba(255, 176, 32, 0.08);
+  --amber: #ff6b00;
+  --amber-dim: #99420a;
+  --amber-wash: rgba(255, 107, 0, 0.08);
 
   --rec: #ff3b30;
 
@@ -186,17 +185,17 @@ p {
 
 .btn-primary {
   background: var(--amber);
-  color: #1a1305;
+  color: #1a0d00;
   font-weight: 600;
 }
 
 .btn-primary:hover {
-  background: #ffc04d;
+  background: #ff8a2e;
 }
 
 .btn-primary:disabled {
   background: var(--amber-dim);
-  color: #cbb98a;
+  color: #d9b799;
   cursor: default;
 }
 
@@ -250,7 +249,7 @@ p {
     left: 0;
     right: 0;
     height: 120px;
-    background: linear-gradient(180deg, transparent, rgba(255, 176, 32, 0.06), transparent);
+    background: linear-gradient(180deg, transparent, rgba(255, 107, 0, 0.06), transparent);
     animation: scan 7s linear infinite;
     pointer-events: none;
   }
@@ -281,7 +280,7 @@ p {
 
 .hero h1 {
   font-size: clamp(34px, 5vw, 54px);
-  max-width: 15ch;
+  max-width: 18ch;
   margin-bottom: 20px;
 }
 
@@ -290,6 +289,25 @@ p {
   font-size: 17px;
   max-width: 52ch;
   margin-bottom: 36px;
+}
+
+/* --------------------------------------------------------------------------
+   Pricing note — small below-the-fold strip
+   -------------------------------------------------------------------------- */
+
+.pricing-note {
+  border-top: 1px solid var(--border-soft);
+  padding: 28px 0;
+  text-align: center;
+}
+
+.pricing-note .osd {
+  color: var(--text-muted);
+}
+
+.pricing-note .osd strong {
+  color: var(--amber);
+  font-weight: 600;
 }
 
 /* --------------------------------------------------------------------------
