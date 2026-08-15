@@ -70,6 +70,21 @@ CREATE TABLE IF NOT EXISTS qrcode (
     image_path TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE cameras ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE cameras ADD COLUMN IF NOT EXISTS last_alert_at TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS alerts (
+    id SERIAL PRIMARY KEY,
+    client_id INTEGER NOT NULL REFERENCES client(id) ON DELETE CASCADE,
+    camera_id INTEGER NOT NULL REFERENCES cameras(id) ON DELETE CASCADE,
+    alert_type TEXT NOT NULL CHECK (alert_type IN ('Theft', 'Threat', 'Weapon')),
+    confidence NUMERIC(5,2),
+    media_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerts_client_created ON alerts (client_id, created_at DESC);
 """
 
 def main():

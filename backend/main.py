@@ -6,7 +6,6 @@ import subprocess
 import sys
 from contextlib import closing
 from urllib.parse import quote
-
 import psycopg2
 import psycopg2.extras
 from dotenv import dotenv_values
@@ -16,6 +15,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from generate_qr_code import build_qr
 from isapi_auth import verify_camera_auth
+
+import random
+import random
+from datetime import datetime, timedelta
+import requests
+from fastapi.responses import PlainTextResponse
+
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 BASE_URL = os.getenv("BASE_URL", "https://getnexusai.co.za")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -55,6 +62,13 @@ _BASE_ENV = dotenv_values(ENV_PATH) if os.path.exists(ENV_PATH) else {}
 # password, etc.) restarts its relay instead of leaving an orphaned
 # process running forever alongside a new one.
 _RUNNING_RELAYS: dict[str, subprocess.Popen] = {}
+
+def _get_client_or_404(cur, token: str):
+    cur.execute("SELECT * FROM client WHERE token = %s", (token,))
+    row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Unknown or expired token.")
+    return row
 
 
 def get_db():
@@ -274,3 +288,186 @@ app.mount(
     StaticFiles(directory=os.path.join(os.path.dirname(__file__), "..", "frontend"), html=True),
     name="frontend",
 )
+
+@app.get("/api/dashboard/{token}")
+def get_dashboard(token: str):
+    with closing(get_db()) as conn:
+        cur = conn.cursor()
+        client = _get_client_or_404(cur, token)
+
+        cur.execute(
+            "SELECT id, channel_id, name, status, last_alert_at FROM cameras WHERE client_id = %s ORDER BY channel_id",
+            (client["id"],),
+        )
+        cameras = cur.fetchall()
+
+        cur.execute(
+            """
+            SELECT COUNT(*) AS count FROM alerts
+            WHERE client_id = %s AND created_at::date = CURRENT_DATE
+            """,
+            (client["id"],),
+        )
+        alerts_today = cur.fetchone()["count"]
+
+    site_status = "Active" if any(c["status"] == "active" for c in cameras) else "Offline"
+
+    camera_list = [
+        {
+            "id": c["id"],
+            "name": c["name"] or f"Camera {c['channel_id']}",
+            "status": c["status"],
+            "last_alert_at": c["last_alert_at"].isoformat() if c["last_alert_at"] else None,
+        }
+        for c in cameras
+    ]
+
+    return {
+        "site_name": client["name"],
+        "status": site_status,
+        "camera_count": len(cameras),
+        "alerts_today": alerts_today,
+        "cameras": camera_list,
+    }
+
+# ---------------------------------------------------------------------------
+# Alert feed (optionally filtered to one camera, e.g. "last 5 for this cam")
+# ---------------------------------------------------------------------------
+
+@app.get("/api/alerts/{token}")
+def get_alerts(token: str, limit: int = 50, camera_id: int | None = None):
+    limit = min(limit, 50)
+    with closing(get_db()) as conn:
+        cur = conn.cursor()
+        client = _get_client_or_404(cur, token)
+
+        query = """
+            SELECT a.id, a.alert_type, a.confidence, a.created_at,
+                   c.id AS camera_id, COALESCE(c.name, 'Camera ' || c.channel_id) AS camera_name
+            FROM alerts a
+            JOIN cameras c ON c.id = a.camera_id
+            WHERE a.client_id = %s
+        """
+        params = [client["id"]]
+
+        if camera_id is not None:
+            query += " AND a.camera_id = %s"
+            params.append(camera_id)
+
+        query += " ORDER BY a.created_at DESC LIMIT %s"
+        params.append(limit)
+
+        cur.execute(query, params)
+        rows = cur.fetchall()
+
+    return [
+        {
+            "id": r["id"],
+            "camera_id": r["camera_id"],
+            "camera_name": r["camera_name"],
+            "type": r["alert_type"],
+            "confidence": float(r["confidence"]) if r["confidence"] is not None else None,
+            "created_at": r["created_at"].isoformat(),
+        }
+        for r in rows
+    ]
+
+# ---------------------------------------------------------------------------
+# Test Alert — proves the DB + Discord pipeline without any live NVR
+# ---------------------------------------------------------------------------
+
+@app.post("/api/test-alert/{token}")
+def fire_test_alert(token: str):
+    with closing(get_db()) as conn:
+        cur = conn.cursor()
+        client = _get_client_or_404(cur, token)
+
+        cur.execute(
+            "SELECT id, channel_id, name FROM cameras WHERE client_id = %s ORDER BY channel_id LIMIT 1",
+            (client["id"],),
+        )
+        camera = cur.fetchone()
+        if camera is None:
+            raise HTTPException(status_code=400, detail="No cameras linked to this client yet.")
+
+        alert_type = random.choice(["Theft", "Threat", "Weapon"])
+        confidence = round(random.uniform(70, 99), 2)
+
+        cur.execute(
+            """
+            INSERT INTO alerts (client_id, camera_id, alert_type, confidence)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id, created_at
+            """,
+            (client["id"], camera["id"], alert_type, confidence),
+        )
+        alert_row = cur.fetchone()
+
+        cur.execute(
+            "UPDATE cameras SET last_alert_at = %s WHERE id = %s",
+            (alert_row["created_at"], camera["id"]),
+        )
+        conn.commit()
+
+    camera_name = camera["name"] or f"Camera {camera['channel_id']}"
+
+    if DISCORD_WEBHOOK_URL:
+        try:
+            requests.post(
+                DISCORD_WEBHOOK_URL,
+                json={
+                    "content": f"🧪 **[TEST]** {alert_type} detected on {camera_name} "
+                               f"({client['name']}) — {confidence}% confidence"
+                },
+                timeout=5,
+            )
+        except requests.RequestException:
+            log.exception("Discord webhook failed for test alert")
+    else:
+        log.warning("DISCORD_WEBHOOK_URL not set — test alert saved to DB but not sent to Discord")
+
+    return {
+        "status": "ok",
+        "alert": {
+            "id": alert_row["id"],
+            "camera_name": camera_name,
+            "type": alert_type,
+            "confidence": confidence,
+            "created_at": alert_row["created_at"].isoformat(),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Weekly report — plain text, per Aphile's spec
+# ---------------------------------------------------------------------------
+
+@app.get("/api/report/{token}")
+def download_report(token: str):
+    with closing(get_db()) as conn:
+        cur = conn.cursor()
+        client = _get_client_or_404(cur, token)
+
+        cur.execute(
+            """
+            SELECT a.created_at, a.alert_type, a.confidence,
+                   COALESCE(c.name, 'Camera ' || c.channel_id) AS camera_name
+            FROM alerts a
+            JOIN cameras c ON c.id = a.camera_id
+            WHERE a.client_id = %s AND a.created_at >= %s
+            ORDER BY a.created_at DESC
+            """,
+            (client["id"], datetime.utcnow() - timedelta(days=7)),
+        )
+        rows = cur.fetchall()
+
+    lines = [f"NexusAI — Weekly Alert Report", f"Site: {client['name']}", f"Generated: {datetime.utcnow().isoformat()}Z", ""]
+    if not rows:
+        lines.append("No alerts in the last 7 days.")
+    else:
+        for r in rows:
+            lines.append(f"{r['created_at']} | {r['camera_name']} | {r['alert_type']} | {r['confidence']}%")
+
+    return PlainTextResponse("\n".join(lines), headers={
+        "Content-Disposition": f"attachment; filename=nexusai_report_{token[:8]}.txt"
+    })
