@@ -283,12 +283,6 @@ def _stop_relay(token: str):
 def health():
     return {"status": "ok"}
 
-app.mount(
-    "/",
-    StaticFiles(directory=os.path.join(os.path.dirname(__file__), "..", "frontend"), html=True),
-    name="frontend",
-)
-
 @app.get("/api/dashboard/{token}")
 def get_dashboard(token: str):
     with closing(get_db()) as conn:
@@ -471,3 +465,9 @@ def download_report(token: str):
     return PlainTextResponse("\n".join(lines), headers={
         "Content-Disposition": f"attachment; filename=nexusai_report_{token[:8]}.txt"
     })
+
+app.mount(
+    "/",
+    StaticFiles(directory=os.path.join(os.path.dirname(__file__), "..", "frontend"), html=True),
+    name="frontend",
+)
