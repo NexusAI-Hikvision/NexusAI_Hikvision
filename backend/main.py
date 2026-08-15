@@ -17,7 +17,6 @@ from generate_qr_code import build_qr
 from isapi_auth import verify_camera_auth
 
 import random
-import random
 from datetime import datetime, timedelta
 import requests
 from fastapi.responses import PlainTextResponse
