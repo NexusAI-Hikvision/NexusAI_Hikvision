@@ -41,7 +41,6 @@ loadClient();
 
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     if (!token) return;
 
     statusEl.className = "form-status";
@@ -68,17 +67,25 @@ form.addEventListener("submit", async (e) => {
         const result = await response.json();
 
         statusEl.classList.add("visible");
+
         if (result.status === "success") {
             statusEl.classList.remove("error");
-        } else {
-            statusEl.classList.add("error");
+            statusEl.textContent = result.message || "Connected! Redirecting to dashboard...";
+            submitBtn.textContent = "Redirecting...";
+            setTimeout(() => {
+                window.location.href = `dashboard.html?token=${encodeURIComponent(token)}`;
+            }, 1200);
+            return; // skip the finally re-enable below
         }
+
+        statusEl.classList.add("error");
         statusEl.textContent = result.message || "Something went wrong. Please try again.";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Connect Camera";
     } catch (err) {
         statusEl.classList.add("visible", "error");
         statusEl.textContent = "Could not reach the server. Is the backend running?";
         console.error("connect-nvr failed:", err);
-    } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = "Connect Camera";
     }
