@@ -8,6 +8,77 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Scoped additions for the connection-type toggle and repeatable
+           camera rows — not in styles.css yet, kept minimal and consistent
+           with the existing field/btn conventions. */
+        .conn-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .conn-toggle input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .conn-toggle label {
+            display: block;
+            padding: 0.75rem 0.9rem;
+            border: 1px solid #262626;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            text-align: center;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .conn-toggle input:checked + label {
+            border-color: #ff6b00;
+            background: rgba(255, 107, 0, 0.08);
+        }
+        .camera-row {
+            border: 1px solid #262626;
+            border-radius: 8px;
+            padding: 0.85rem 0.9rem 0.4rem;
+            margin-bottom: 0.85rem;
+        }
+        .camera-row-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .camera-row-head span {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.72rem;
+            color: #8a8a8a;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .camera-remove-btn {
+            background: none;
+            border: none;
+            color: #8a8a8a;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+        .camera-remove-btn:hover { color: #ff4d4d; }
+        .add-camera-btn {
+            width: 100%;
+            padding: 0.65rem;
+            background: transparent;
+            border: 1px dashed #3a3a3a;
+            border-radius: 8px;
+            color: #8a8a8a;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-bottom: 1.25rem;
+        }
+        .add-camera-btn:hover { border-color: #ff6b00; color: #ff6b00; }
+        [hidden] { display: none !important; }
+    </style>
 </head>
 <body>
 
@@ -24,24 +95,43 @@
         <p class="form-sub" id="client-name">Enter your NVR's details so we can confirm it's reachable.</p>
 
         <form id="connect-camera-form">
-            <div class="field">
-                <label for="camera_ip">NVR IP</label>
-                <input type="text" id="camera_ip" name="camera_ip" placeholder="192.168.1.64" required>
+
+            <div class="conn-toggle" role="radiogroup" aria-label="Connection type">
+                <input type="radio" name="conn_type" id="conn-nvr" value="nvr" checked>
+                <label for="conn-nvr">I have an NVR</label>
+
+                <input type="radio" name="conn_type" id="conn-individual" value="individual">
+                <label for="conn-individual">I have individual IP cameras</label>
             </div>
 
-            <div class="field">
-                <label for="camera_port">NVR Port</label>
-                <input type="number" id="camera_port" name="camera_port" placeholder="80" min="1" max="65535" value="80" required>
+            <!-- NVR fields — unchanged, hits the existing /connect-nvr endpoint -->
+            <div id="nvr-fields">
+                <div class="field">
+                    <label for="camera_ip">NVR IP</label>
+                    <input type="text" id="camera_ip" name="camera_ip" placeholder="192.168.1.64">
+                </div>
+
+                <div class="field">
+                    <label for="camera_port">NVR Port</label>
+                    <input type="number" id="camera_port" name="camera_port" placeholder="80" min="1" max="65535" value="80">
+                </div>
+
+                <div class="field">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="admin">
+                </div>
+
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••">
+                </div>
             </div>
 
-            <div class="field">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="admin" required>
-            </div>
-
-            <div class="field">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="••••••••" required>
+            <!-- Individual camera fields — secondary flow, mocked until a
+                 real backend endpoint + schema exist for standalone cameras -->
+            <div id="individual-fields" hidden>
+                <div id="camera-list"></div>
+                <button type="button" class="add-camera-btn" id="add-camera-btn">+ Add another camera</button>
             </div>
 
             <button type="submit" id="submit-btn" class="btn btn-primary">Connect Camera</button>
